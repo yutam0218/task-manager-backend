@@ -105,7 +105,8 @@ app.post('/tasks/advice', async (req: Request, res: Response) => {
     3. ユーザーのモチベーションが上がるような励ましのアドバイスを添えてください。
     `;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // ★ エラー解消のためモデル名を gemini-1.5-flash-latest に変更します
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
     const result = await model.generateContent(prompt);
     const advice = result.response.text();
 
