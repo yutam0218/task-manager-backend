@@ -1,7 +1,7 @@
 // src/index.ts
 import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai'; // ★ 新しいSDKのインポート
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -13,8 +13,8 @@ app.use(express.json());
 
 const prisma = new PrismaClient();
 
-// Gemini APIの初期化 (環境変数に GEMINI_API_KEY を設定してください)
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+// ★ 新しいSDKの初期化 (apiKeyプロパティで指定)
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 // タスク一覧の取得
 app.get('/tasks', async (req: Request, res: Response) => {
@@ -105,10 +105,14 @@ app.post('/tasks/advice', async (req: Request, res: Response) => {
     3. ユーザーのモチベーションが上がるような励ましのアドバイスを添えてください。
     `;
 
-    // ★ エラー解消のためモデル名を gemini-1.5-flash-latest に変更します
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const result = await model.generateContent(prompt);
-    const advice = result.response.text();
+    // ★ 新しいSDKの呼び出し形式に変更し、モデルを gemini-1.5-flash に設定
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: prompt,
+    });
+    
+    // 取得方法も response.text に変更
+    const advice = response.text;
 
     res.json({ advice });
   } catch (error) {
