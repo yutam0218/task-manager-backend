@@ -106,7 +106,7 @@ app.post('/tasks/advice', async (req: Request, res: Response) => {
     `;
 
     // ★ エラー解消のためモデル名を gemini-1.5-flash-latest に変更します
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     const result = await model.generateContent(prompt);
     const advice = result.response.text();
 
