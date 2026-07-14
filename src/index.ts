@@ -105,9 +105,9 @@ app.post('/tasks/advice', async (req: Request, res: Response) => {
     3. ユーザーのモチベーションが上がるような励ましのアドバイスを添えてください。
     `;
 
-    // ★ 新しいSDKの呼び出し形式に変更し、モデルを gemini-1.5-flash に設定
+    // ★ 新しいSDKの呼び出し形式に変更し、モデルを gemini-3.5-flash に設定
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-3.5-flash",
       contents: prompt,
     });
     
