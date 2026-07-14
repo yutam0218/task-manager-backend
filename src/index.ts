@@ -50,7 +50,8 @@ app.post('/tasks', async (req: Request, res: Response) => {
 // タスクの完了状態を更新するAPI
 app.patch('/tasks/:id/complete', async (req: Request, res: Response) => {
   try {
-    const taskId = parseInt(req.params.id, 10);
+    // TypeScriptの型エラーを回避するために String() で明示的に文字列に変換します
+    const taskId = parseInt(String(req.params.id), 10);
     const { completed } = req.body; // true または false を受け取る
 
     if (typeof completed !== 'boolean') {
