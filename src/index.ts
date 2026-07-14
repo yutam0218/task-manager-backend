@@ -1,7 +1,7 @@
 // src/index.ts
 import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { GoogleGenAI } from '@google/genai'; // ★ 新しいSDKのインポート
+import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -13,7 +13,7 @@ app.use(express.json());
 
 const prisma = new PrismaClient();
 
-// ★ 新しいSDKの初期化 (apiKeyプロパティで指定)
+// 新しいSDKの初期化 (apiKeyプロパティで指定)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 // タスク一覧の取得
@@ -105,18 +105,23 @@ app.post('/tasks/advice', async (req: Request, res: Response) => {
     3. ユーザーのモチベーションが上がるような励ましのアドバイスを添えてください。
     `;
 
-    // ★ 新しいSDKの呼び出し形式に変更し、モデルを gemini-3.5-flash に設定
+    // モデルを gemini-3.5-flash に設定
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
       contents: prompt,
     });
     
-    // 取得方法も response.text に変更
     const advice = response.text;
 
     res.json({ advice });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
+    
+    // ★ 503エラー（サーバー混雑）の場合の専用エラーメッセージ
+    if (error?.status === 503) {
+      return res.status(503).json({ error: '現在AIサーバーが混雑しています。しばらく経ってから再度お試しください。' });
+    }
+    
     res.status(500).json({ error: 'Failed to generate advice' });
   }
 });
