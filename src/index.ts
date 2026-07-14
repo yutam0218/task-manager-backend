@@ -3,12 +3,17 @@ import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
+import cors from 'cors'; // ★ CORSパッケージをインポート
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+// ★ CORSミドルウェアを有効化
+// 現在はすべてのドメインからのリクエストを許可しています。
+// 本番環境で特定のドメインのみ許可したい場合は、 cors({ origin: 'https://あなたのフロントエンドのURL' }) のように設定します。
+app.use(cors());
 app.use(express.json());
 
 const prisma = new PrismaClient();
@@ -117,7 +122,7 @@ app.post('/tasks/advice', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error(error);
     
-    // ★ 503エラー（サーバー混雑）の場合の専用エラーメッセージ
+    // 503エラー（サーバー混雑）の場合の専用エラーメッセージ
     if (error?.status === 503) {
       return res.status(503).json({ error: '現在AIサーバーが混雑しています。しばらく経ってから再度お試しください。' });
     }
