@@ -1,0 +1,21 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Task {
+  id            Int      @id @default(autoincrement())
+  title         String
+  deadline      DateTime
+  importance    Int      // 例: 1(低) 〜 5(高)
+  time_required Int      // 単位: 分
+  completed     Boolean  @default(false) // 完了状態
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
