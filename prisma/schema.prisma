@@ -11,11 +11,12 @@ datasource db {
 
 model Task {
   id            Int      @id @default(autoincrement())
+  userId        String   // 追加: ユーザー識別用のID
   title         String
   deadline      DateTime
   importance    Int      // 例: 1(低) 〜 5(高)
   time_required Int      // 単位: 分
-  completed     Boolean  @default(false) // 完了状態
+  completed     Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }

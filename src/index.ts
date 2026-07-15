@@ -3,28 +3,31 @@ import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
-import cors from 'cors'; // ★ CORSパッケージをインポート
+import cors from 'cors';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// ★ CORSミドルウェアを有効化
-// 現在はすべてのドメインからのリクエストを許可しています。
-// 本番環境で特定のドメインのみ許可したい場合は、 cors({ origin: 'https://あなたのフロントエンドのURL' }) のように設定します。
 app.use(cors());
 app.use(express.json());
 
 const prisma = new PrismaClient();
 
-// 新しいSDKの初期化 (apiKeyプロパティで指定)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 // タスク一覧の取得
 app.get('/tasks', async (req: Request, res: Response) => {
   try {
-    const tasks = await prisma.task.findMany();
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(400).json({ error: 'X-User-Id header is required' });
+    }
+
+    const tasks = await prisma.task.findMany({
+      where: { userId } // 自分(userId)のタスクのみ取得
+    });
     res.json(tasks);
   } catch (error) {
     console.error(error);
@@ -35,14 +38,19 @@ app.get('/tasks', async (req: Request, res: Response) => {
 // タスクの作成
 app.post('/tasks', async (req: Request, res: Response) => {
   try {
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(400).json({ error: 'X-User-Id header is required' });
+    }
+
     const { title, deadline, importance, time_required } = req.body;
     const newTask = await prisma.task.create({
       data: {
+        userId, // タスク作成時にユーザーIDを紐付ける
         title,
         deadline: new Date(deadline),
         importance,
         time_required,
-        // completed はデフォルトで false になるため指定不要です
       },
     });
     res.status(201).json(newTask);
@@ -55,16 +63,21 @@ app.post('/tasks', async (req: Request, res: Response) => {
 // タスクの完了状態を更新するAPI
 app.patch('/tasks/:id/complete', async (req: Request, res: Response) => {
   try {
-    // TypeScriptの型エラーを回避するために String() で明示的に文字列に変換します
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(400).json({ error: 'X-User-Id header is required' });
+    }
+
     const taskId = parseInt(String(req.params.id), 10);
-    const { completed } = req.body; // true または false を受け取る
+    const { completed } = req.body;
 
     if (typeof completed !== 'boolean') {
       return res.status(400).json({ error: 'completed (真偽値) をリクエストボディに含めてください' });
     }
 
+    // 他人のタスクを勝手に更新できないように userId も条件に入れる
     const updatedTask = await prisma.task.update({
-      where: { id: taskId },
+      where: { id: taskId, userId: userId },
       data: { completed },
     });
     res.json(updatedTask);
@@ -77,15 +90,21 @@ app.patch('/tasks/:id/complete', async (req: Request, res: Response) => {
 // やる気に合わせたタスク提案API
 app.post('/tasks/advice', async (req: Request, res: Response) => {
   try {
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(400).json({ error: 'X-User-Id header is required' });
+    }
+
     const { motivation } = req.body;
     
     if (!motivation) {
       return res.status(400).json({ error: 'motivation (やる気) をリクエストボディに含めてください' });
     }
 
-    // 未完了のタスクのみを取得するように変更
+    // 自分の未完了タスクのみを取得
     const tasks = await prisma.task.findMany({
       where: {
+        userId: userId,
         completed: false
       }
     });
@@ -110,7 +129,6 @@ app.post('/tasks/advice', async (req: Request, res: Response) => {
     3. ユーザーのモチベーションが上がるような励ましのアドバイスを添えてください。
     `;
 
-    // モデルを gemini-3.5-flash に設定
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
       contents: prompt,
@@ -122,7 +140,6 @@ app.post('/tasks/advice', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error(error);
     
-    // 503エラー（サーバー混雑）の場合の専用エラーメッセージ
     if (error?.status === 503) {
       return res.status(503).json({ error: '現在AIサーバーが混雑しています。しばらく経ってから再度お試しください。' });
     }
